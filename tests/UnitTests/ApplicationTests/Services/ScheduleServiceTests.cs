@@ -5,6 +5,8 @@ using Domain.ScheduleAggregate;
 using Domain.ScheduleAggregate.ValueObjects;
 using FluentAssertions;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using NSubstitute.ReceivedExtensions;
 using UnitTests.Common.Fakers;
 
 namespace UnitTests.ApplicationTests.Services
@@ -26,18 +28,23 @@ namespace UnitTests.ApplicationTests.Services
             _sut = new ScheduleService(_bank, _government, _scheduleRepository);
         }
 
+        private void SetupScheduleRepository(int count)
+        {
+            var schedules = new ScheduleFaker()
+                .Generate(count);
+
+            _scheduleRepository
+                .GetSchedulesFor(default, CancellationToken.None)
+                .ReturnsForAnyArgs(schedules);
+        }
+
         [InlineData(1)]
         [InlineData(10)]
         [Theory]
         public async Task Settle_all_scheduled_payments(int schedulesCount)
         {
             // Arrrange
-            var schedules = new ScheduleFaker()
-                .Generate(schedulesCount);
-
-            _scheduleRepository
-                .GetSchedulesFor(default, default)
-                .ReturnsForAnyArgs(schedules);
+            SetupScheduleRepository(schedulesCount);
 
             _bank
                 .Withdraw(default, default, default)
@@ -55,6 +62,18 @@ namespace UnitTests.ApplicationTests.Services
             output.Schedules
                 .Where(schedule => schedule.Status == ScheduleStatus.Completed)
                 .Should().HaveCount(schedulesCount);
+
+            await _bank
+                .ReceivedWithAnyArgs(schedulesCount)
+                .Withdraw(default, default, default);
+
+            await _government
+                .ReceivedWithAnyArgs(schedulesCount)
+                .Deposit(default, default, default);
+
+            await _bank
+                .DidNotReceiveWithAnyArgs()
+                .Deposit(default, default, default);
         }
 
         [Fact]
@@ -74,12 +93,7 @@ namespace UnitTests.ApplicationTests.Services
         public async Task Do_not_settle_scheduled_payments_with_insufficient_funds(int schedulesCount, int schedulesWithInsuficientFunds)
         {
             // Arrrange
-            var schedules = new ScheduleFaker()
-                .Generate(schedulesCount);
-
-            _scheduleRepository
-                .GetSchedulesFor(default, CancellationToken.None)
-                .ReturnsForAnyArgs(schedules);
+            SetupScheduleRepository(schedulesCount);
 
             _bank
                 .Withdraw(Arg.Is<BankAccount>(bankAccount => int.Parse(bankAccount.AccountNumber) <= schedulesWithInsuficientFunds), default, default)
@@ -93,6 +107,8 @@ namespace UnitTests.ApplicationTests.Services
                 .Deposit(default, default, default)
                 .ReturnsForAnyArgs(GatewayOutput.Succeeded());
 
+            var expectedGovernmentDepositsCount = schedulesCount - schedulesWithInsuficientFunds;
+
             // Act
             var output = await _sut.Execute(DateOnly.FromDateTime(DateTime.Now.Date), CancellationToken.None);
 
@@ -101,21 +117,28 @@ namespace UnitTests.ApplicationTests.Services
             output.Schedules
                 .Where(schedule => schedule.Status == ScheduleStatus.Failed)
                 .Should().HaveCount(schedulesWithInsuficientFunds);
+
+            await _bank
+                .ReceivedWithAnyArgs(schedulesCount)
+                .Withdraw(default, default, default);
+
+            await _government
+                .ReceivedWithAnyArgs(expectedGovernmentDepositsCount)
+                .Deposit(default, default, default);
+
+            await _bank
+                .DidNotReceiveWithAnyArgs()
+                .Deposit(default, default, default);
         }
 
         [InlineData(1, 1)]
         [InlineData(10, 5)]
         [InlineData(10, 10)]
         [Theory]
-        public async Task Do_not_settle_scheduled_payments_when_refused_by_government(int schedulesCount, int schedulesRefusedByGovernment)
+        public async Task Refund_scheduled_payments_when_refused_by_government(int schedulesCount, int schedulesRefusedByGovernment)
         {
             // Arrrange
-            var schedules = new ScheduleFaker()
-                .Generate(schedulesCount);
-
-            _scheduleRepository
-                .GetSchedulesFor(default, CancellationToken.None)
-                .ReturnsForAnyArgs(schedules);
+            SetupScheduleRepository(schedulesCount);
 
             _bank
                 .Withdraw(default, default, default)
@@ -137,6 +160,78 @@ namespace UnitTests.ApplicationTests.Services
             output.Schedules
                 .Where(schedule => schedule.Status == ScheduleStatus.Failed)
                 .Should().HaveCount(schedulesRefusedByGovernment);
+
+            await _bank
+                .ReceivedWithAnyArgs(schedulesCount)
+                .Withdraw(default, default, default);
+
+            await _government
+                .ReceivedWithAnyArgs(schedulesCount)
+                .Deposit(default, default, default);
+
+            await _bank
+                .ReceivedWithAnyArgs(schedulesRefusedByGovernment)
+                .Deposit(default, default, default);
+        }
+
+        [Fact]
+        public async Task Refund_failure()
+        {
+            // Arrrange
+            SetupScheduleRepository(1);
+
+            _bank
+                .Withdraw(default, default, default)
+                .ReturnsForAnyArgs(GatewayOutput.Succeeded());
+
+            _government
+                .Deposit(default, default, default)
+                .ReturnsForAnyArgs(GatewayOutput.Failed("Payment refused"));
+
+            _bank
+                .Deposit(default, default, default)
+                .ReturnsForAnyArgs(GatewayOutput.Failed("Deposit failed"));
+
+            // Act
+            var output = await _sut.Execute(DateOnly.FromDateTime(DateTime.Now.Date), CancellationToken.None);
+
+            // Assert
+            output.Schedules.Should().HaveCount(1);
+            output.Schedules
+                .Where(schedule => schedule.Status == ScheduleStatus.Failed)
+                .Should().HaveCount(1);
+
+            await _bank
+                .ReceivedWithAnyArgs(1)
+                .Withdraw(default, default, default);
+
+            await _government
+                .ReceivedWithAnyArgs(1)
+                .Deposit(default, default, default);
+
+            await _bank
+                .ReceivedWithAnyArgs(1)
+                .Deposit(default, default, default);
+        }
+
+        [Fact]
+        public async Task Exception_thrown_during_settlement()
+        {
+            // Arrrange
+            SetupScheduleRepository(1);
+
+            _bank
+                .Withdraw(default, default, default)
+                .ThrowsAsync(new Exception());
+
+            // Act
+            var output = await _sut.Execute(DateOnly.FromDateTime(DateTime.Now.Date), CancellationToken.None);
+
+            // Assert
+            output.Schedules.Should().HaveCount(1);
+            output.Schedules
+                .Where(schedule => schedule.Status == ScheduleStatus.Failed)
+                .Should().HaveCount(1);
         }
     }
 }
