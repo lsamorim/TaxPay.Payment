@@ -20,7 +20,7 @@ namespace Application.Services
             _scheduleRepository = scheduleRepository;
         }
 
-        public async Task<ScheduleServiceOutput> Execute(DateOnly date, CancellationToken cancellationToken)
+        public async Task<ScheduleServiceOutput> Execute(DateTimeOffset date, CancellationToken cancellationToken)
         {
             var schedules = await _scheduleRepository.GetSchedulesFor(date, cancellationToken);
             foreach (var schedule in schedules)

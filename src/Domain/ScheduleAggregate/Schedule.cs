@@ -11,7 +11,7 @@ namespace Domain.ScheduleAggregate
 
         public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
 
-        public DateOnly ScheduleDate { get; private set; }
+        public DateTimeOffset ScheduleDate { get; private set; }
 
         public BankAccount BankAccount { get; private set; }
 
@@ -23,7 +23,7 @@ namespace Domain.ScheduleAggregate
 
         private Schedule() { }
 
-        public Schedule(DateOnly scheduleDate, BankAccount bankAccount)
+        public Schedule(DateTimeOffset scheduleDate, BankAccount bankAccount)
         {
             ScheduleDate = scheduleDate;
             BankAccount = bankAccount;

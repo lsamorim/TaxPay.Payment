@@ -1,6 +1,6 @@
 ﻿namespace Domain.ScheduleAggregate.ValueObjects
 {
-    public struct BankAccount
+    public class BankAccount
     {
         public string InstitutionNumber { get; private set; }
         public string BranchNumber { get; private set; }

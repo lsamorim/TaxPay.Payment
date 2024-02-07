@@ -4,6 +4,6 @@ namespace Application.Services
 {
     public interface IScheduleService
     {
-        Task<ScheduleServiceOutput> Execute(DateOnly date, CancellationToken cancellationToken);
+        Task<ScheduleServiceOutput> Execute(DateTimeOffset date, CancellationToken cancellationToken);
     }
 }
