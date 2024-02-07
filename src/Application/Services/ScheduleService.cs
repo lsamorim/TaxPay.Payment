@@ -28,6 +28,8 @@ namespace Application.Services
                 await Settle(schedule, cancellationToken);
             }
 
+            await _scheduleRepository.UnitOfWork.SaveChanges(cancellationToken);
+
             return new ScheduleServiceOutput(schedules);
         }
 

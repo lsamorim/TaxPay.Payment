@@ -3,6 +3,7 @@ using Application.Gateways.Dtos;
 using Application.Services;
 using Domain.ScheduleAggregate;
 using Domain.ScheduleAggregate.ValueObjects;
+using Domain.Seedwork;
 using FluentAssertions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -24,6 +25,7 @@ namespace UnitTests.ApplicationTests.Services
             _bank = Substitute.For<IBank>();
             _government = Substitute.For<IGovernment>();
             _scheduleRepository = Substitute.For<IScheduleRepository>();
+            _scheduleRepository.UnitOfWork.Returns(Substitute.For<IUnitOfWork>());
 
             _sut = new ScheduleService(_bank, _government, _scheduleRepository);
         }
@@ -55,7 +57,7 @@ namespace UnitTests.ApplicationTests.Services
                 .ReturnsForAnyArgs(GatewayOutput.Succeeded());
 
             // Act
-            var output = await _sut.Execute(DateOnly.FromDateTime(DateTime.Now.Date), CancellationToken.None);
+            var output = await _sut.Execute(DateTimeOffset.UtcNow, CancellationToken.None);
 
             // Assert
             output.Schedules.Should().HaveCount(schedulesCount);
@@ -74,13 +76,17 @@ namespace UnitTests.ApplicationTests.Services
             await _bank
                 .DidNotReceiveWithAnyArgs()
                 .Deposit(default, default, default);
+
+            await _scheduleRepository.UnitOfWork
+                .ReceivedWithAnyArgs(1)
+                .SaveChanges(default);
         }
 
         [Fact]
         public async Task No_settlement_when_there_are_no_scheduled_payment_for_the_date()
         {
             // Act
-            var output = await _sut.Execute(DateOnly.FromDateTime(DateTime.Now.Date), CancellationToken.None);
+            var output = await _sut.Execute(DateTimeOffset.UtcNow, CancellationToken.None);
 
             // Assert
             output.Schedules.Should().BeEmpty();
@@ -110,7 +116,7 @@ namespace UnitTests.ApplicationTests.Services
             var expectedGovernmentDepositsCount = schedulesCount - schedulesWithInsuficientFunds;
 
             // Act
-            var output = await _sut.Execute(DateOnly.FromDateTime(DateTime.Now.Date), CancellationToken.None);
+            var output = await _sut.Execute(DateTimeOffset.UtcNow, CancellationToken.None);
 
             // Assert
             output.Schedules.Should().HaveCount(schedulesCount);
@@ -129,6 +135,10 @@ namespace UnitTests.ApplicationTests.Services
             await _bank
                 .DidNotReceiveWithAnyArgs()
                 .Deposit(default, default, default);
+
+            await _scheduleRepository.UnitOfWork
+                .ReceivedWithAnyArgs(1)
+                .SaveChanges(default);
         }
 
         [InlineData(1, 1)]
@@ -153,7 +163,7 @@ namespace UnitTests.ApplicationTests.Services
                 .Returns(GatewayOutput.Succeeded());
 
             // Act
-            var output = await _sut.Execute(DateOnly.FromDateTime(DateTime.Now.Date), CancellationToken.None);
+            var output = await _sut.Execute(DateTimeOffset.UtcNow, CancellationToken.None);
 
             // Assert
             output.Schedules.Should().HaveCount(schedulesCount);
@@ -172,6 +182,10 @@ namespace UnitTests.ApplicationTests.Services
             await _bank
                 .ReceivedWithAnyArgs(schedulesRefusedByGovernment)
                 .Deposit(default, default, default);
+
+            await _scheduleRepository.UnitOfWork
+                .ReceivedWithAnyArgs(1)
+                .SaveChanges(default);
         }
 
         [Fact]
@@ -193,7 +207,7 @@ namespace UnitTests.ApplicationTests.Services
                 .ReturnsForAnyArgs(GatewayOutput.Failed("Deposit failed"));
 
             // Act
-            var output = await _sut.Execute(DateOnly.FromDateTime(DateTime.Now.Date), CancellationToken.None);
+            var output = await _sut.Execute(DateTimeOffset.UtcNow, CancellationToken.None);
 
             // Assert
             output.Schedules.Should().HaveCount(1);
@@ -212,6 +226,10 @@ namespace UnitTests.ApplicationTests.Services
             await _bank
                 .ReceivedWithAnyArgs(1)
                 .Deposit(default, default, default);
+
+            await _scheduleRepository.UnitOfWork
+                .ReceivedWithAnyArgs(1)
+                .SaveChanges(default);
         }
 
         [Fact]
@@ -225,13 +243,17 @@ namespace UnitTests.ApplicationTests.Services
                 .ThrowsAsync(new Exception());
 
             // Act
-            var output = await _sut.Execute(DateOnly.FromDateTime(DateTime.Now.Date), CancellationToken.None);
+            var output = await _sut.Execute(DateTimeOffset.UtcNow, CancellationToken.None);
 
             // Assert
             output.Schedules.Should().HaveCount(1);
             output.Schedules
                 .Where(schedule => schedule.Status == ScheduleStatus.Failed)
                 .Should().HaveCount(1);
+
+            await _scheduleRepository.UnitOfWork
+                .ReceivedWithAnyArgs(1)
+                .SaveChanges(default);
         }
     }
 }

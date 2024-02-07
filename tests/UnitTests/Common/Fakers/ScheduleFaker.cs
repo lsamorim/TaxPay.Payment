@@ -1,6 +1,5 @@
 ﻿using Bogus;
 using Domain.ScheduleAggregate;
-using UnitTests.Common.Builders;
 
 namespace UnitTests.Common.Fakers
 {
@@ -10,13 +9,11 @@ namespace UnitTests.Common.Fakers
         {
             base.CustomInstantiator(faker => 
                 new Schedule(
-                    DateOnly
-                        .FromDateTime(faker.Date.Future()),
-                    new BankAccountBuilder()
+                    faker.Date.FutureOffset(),
+                    new BankAccountFaker()
                         .WithAccountNumber((faker.IndexFaker + 1))
-                        .Build()
+                        .Generate()
                 ));
-            RuleFor(schedule => schedule.Id, faker => faker.IndexFaker + 1);
         }
     }
 }

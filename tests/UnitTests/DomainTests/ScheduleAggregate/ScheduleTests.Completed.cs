@@ -2,7 +2,7 @@
 using Domain.ScheduleAggregate;
 using Domain.Seedwork;
 using FluentAssertions;
-using UnitTests.Common.Builders;
+using UnitTests.Common.Fakers;
 
 namespace UnitTests.DomainTests.ScheduleAggregate
 {
@@ -13,8 +13,8 @@ namespace UnitTests.DomainTests.ScheduleAggregate
         {
             // Arrange
             var faker = new Faker();
-            var scheduleDate = DateOnly.FromDateTime(faker.Date.Future());
-            var bankAccount = new BankAccountBuilder().Build();
+            var scheduleDate = faker.Date.FutureOffset();
+            var bankAccount = new BankAccountFaker().Generate();
 
             var sut = new Schedule(scheduleDate, bankAccount);
             sut.Canceled();
@@ -31,8 +31,8 @@ namespace UnitTests.DomainTests.ScheduleAggregate
         {
             // Arrange
             var faker = new Faker();
-            var scheduleDate = DateOnly.FromDateTime(faker.Date.Future());
-            var bankAccount = new BankAccountBuilder().Build();
+            var scheduleDate = faker.Date.FutureOffset();
+            var bankAccount = new BankAccountFaker().Generate();
 
             var sut = new Schedule(scheduleDate, bankAccount);
 
