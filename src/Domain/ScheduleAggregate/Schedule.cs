@@ -21,8 +21,6 @@ namespace Domain.ScheduleAggregate
 
         public string? Comment { get; private set; }
 
-        private Schedule() { }
-
         public Schedule(DateTimeOffset scheduleDate, BankAccount bankAccount)
         {
             ScheduleDate = scheduleDate;

@@ -15,8 +15,6 @@ namespace Infrastructure.SqlServer.Configurations.ScheduleAggregate
                 e.Property(b => b.BranchNumber).HasColumnName(nameof(BankAccount.BranchNumber));
                 e.Property(b => b.AccountNumber).HasColumnName(nameof(BankAccount.AccountNumber));
             });
-
-            //builder.Property(e => e.ScheduleDate).HasConversion(from => from.ToDateTime())
         }
     }
 }
