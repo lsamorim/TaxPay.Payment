@@ -15,7 +15,7 @@ namespace Domain.ScheduleAggregate
 
         public BankAccount BankAccount { get; private set; }
 
-        public decimal Amount { get; }
+        public decimal Amount { get; private set; }
 
         public ScheduleStatus Status { get; private set; }
 

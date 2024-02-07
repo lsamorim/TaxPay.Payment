@@ -45,7 +45,7 @@ namespace UnitTests.ApplicationTests.Services
         [Theory]
         public async Task Settle_all_scheduled_payments(int schedulesCount)
         {
-            // Arrrange
+            // Arrange
             SetupScheduleRepository(schedulesCount);
 
             _bank
@@ -98,7 +98,7 @@ namespace UnitTests.ApplicationTests.Services
         [Theory]
         public async Task Do_not_settle_scheduled_payments_with_insufficient_funds(int schedulesCount, int schedulesWithInsuficientFunds)
         {
-            // Arrrange
+            // Arrange
             SetupScheduleRepository(schedulesCount);
 
             _bank
@@ -147,7 +147,7 @@ namespace UnitTests.ApplicationTests.Services
         [Theory]
         public async Task Refund_scheduled_payments_when_refused_by_government(int schedulesCount, int schedulesRefusedByGovernment)
         {
-            // Arrrange
+            // Arrange
             SetupScheduleRepository(schedulesCount);
 
             _bank
@@ -191,7 +191,7 @@ namespace UnitTests.ApplicationTests.Services
         [Fact]
         public async Task Refund_failure()
         {
-            // Arrrange
+            // Arrange
             SetupScheduleRepository(1);
 
             _bank
@@ -235,7 +235,7 @@ namespace UnitTests.ApplicationTests.Services
         [Fact]
         public async Task Exception_thrown_during_settlement()
         {
-            // Arrrange
+            // Arrange
             SetupScheduleRepository(1);
 
             _bank
