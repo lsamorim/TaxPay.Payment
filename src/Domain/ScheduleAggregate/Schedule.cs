@@ -29,7 +29,8 @@ namespace Domain.ScheduleAggregate
             BankAccount = bankAccount;
             Status = ScheduleStatus.Scheduled;
         }
-        public bool IsIn(params ScheduleStatus[] scheduleStatus) => scheduleStatus.Contains(Status);
+
+        private bool IsIn(params ScheduleStatus[] scheduleStatus) => scheduleStatus.Contains(Status);
 
         public void Completed()
         {
@@ -46,6 +47,14 @@ namespace Domain.ScheduleAggregate
 
             Comment = comment;
             Status = ScheduleStatus.Failed;
+        }
+
+        public void Canceled()
+        {
+            if (IsIn(ScheduleStatus.Completed))
+                throw new DomainException($"Cannot change schedule status to {ScheduleStatus.Failed}. Schedule is already {Status}");
+
+            Status = ScheduleStatus.Canceled;
         }
     }
 }
