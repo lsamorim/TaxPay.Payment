@@ -1,6 +1,8 @@
 ﻿using Application.Gateways;
+using Application.Gateways.Dtos;
 using Application.Services;
 using Domain.ScheduleAggregate;
+using Domain.ScheduleAggregate.ValueObjects;
 using FluentAssertions;
 using NSubstitute;
 using UnitTests.Common.Fakers;
@@ -37,6 +39,14 @@ namespace UnitTests.ApplicationTests.Services
                 .GetSchedulesFor(default, default)
                 .ReturnsForAnyArgs(schedules);
 
+            _bank
+                .Withdraw(default, default, default)
+                .ReturnsForAnyArgs(GatewayOutput.Succeeded());
+
+            _government
+                .Deposit(default, default, default)
+                .ReturnsForAnyArgs(GatewayOutput.Succeeded());
+
             // Act
             var output = await _sut.Execute(DateOnly.FromDateTime(DateTime.Now.Date), CancellationToken.None);
 
@@ -69,7 +79,19 @@ namespace UnitTests.ApplicationTests.Services
 
             _scheduleRepository
                 .GetSchedulesFor(default, CancellationToken.None)
-                .Returns(schedules);
+                .ReturnsForAnyArgs(schedules);
+
+            _bank
+                .Withdraw(Arg.Is<BankAccount>(bankAccount => int.Parse(bankAccount.AccountNumber) <= schedulesWithInsuficientFunds), default, default)
+                .Returns(GatewayOutput.Failed("Insufficient funds"));
+
+            _bank
+                .Withdraw(Arg.Is<BankAccount>(bankAccount => int.Parse(bankAccount.AccountNumber) > schedulesWithInsuficientFunds), default, default)
+                .Returns(GatewayOutput.Succeeded());
+
+            _government
+                .Deposit(default, default, default)
+                .ReturnsForAnyArgs(GatewayOutput.Succeeded());
 
             // Act
             var output = await _sut.Execute(DateOnly.FromDateTime(DateTime.Now.Date), CancellationToken.None);
@@ -93,7 +115,19 @@ namespace UnitTests.ApplicationTests.Services
 
             _scheduleRepository
                 .GetSchedulesFor(default, CancellationToken.None)
-                .Returns(schedules);
+                .ReturnsForAnyArgs(schedules);
+
+            _bank
+                .Withdraw(default, default, default)
+                .ReturnsForAnyArgs(GatewayOutput.Succeeded());
+
+            _government
+                .Deposit(Arg.Is<BankAccount>(bankAccount => int.Parse(bankAccount.AccountNumber) <= schedulesRefusedByGovernment), default, default)
+                .Returns(GatewayOutput.Failed("Payment refused"));
+
+            _government
+                .Deposit(Arg.Is<BankAccount>(bankAccount => int.Parse(bankAccount.AccountNumber) > schedulesRefusedByGovernment), default, default)
+                .Returns(GatewayOutput.Succeeded());
 
             // Act
             var output = await _sut.Execute(DateOnly.FromDateTime(DateTime.Now.Date), CancellationToken.None);
