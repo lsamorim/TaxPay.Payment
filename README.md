@@ -4,4 +4,4 @@ TaxPay Payment was elaborated to serve as the payment context of a system for ac
 
 For now, the functionalities covered are:
 
-* 🚧 Settle scheduled tax payments
+* Settle scheduled tax payments
